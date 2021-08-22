@@ -303,3 +303,9 @@ myapi.key:
 
 
 .PHONY: handin tarball tarball-pref clean grade handin-check
+
+SEND_FILES = user/sleep.c
+REMOTE_IP = 115.159.69.199
+REMOTE_PATH = /root/xv6-labs-2020/user
+send:
+	scp $(SEND_FILES) root@$(REMOTE_IP):$(REMOTE_PATH)
