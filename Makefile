@@ -149,6 +149,7 @@ UPROGS=\
 	$U/_grind\
 	$U/_wc\
 	$U/_zombie\
+	$U/_sleep\
 
 
 ifeq ($(LAB),syscall)
@@ -306,6 +307,9 @@ myapi.key:
 
 SEND_FILES = user/sleep.c
 REMOTE_IP = 115.159.69.199
-REMOTE_PATH = /root/xv6-labs-2020/user
+REMOTE_PATH = /root/xv6-labs-2020/
 send:
-	scp $(SEND_FILES) root@$(REMOTE_IP):$(REMOTE_PATH)
+	scp $(SEND_FILES) root@$(REMOTE_IP):$(REMOTE_PATH)/user
+
+sendMakefile:
+	scp Makefile root@$(REMOTE_IP):$(REMOTE_PATH)
