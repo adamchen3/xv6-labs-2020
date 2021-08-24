@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
 
 void test(int left[])
 {
-    // close(left[1]);
+    close(left[1]);
     int right[2];
     int hasFork = 0;
     int num;
@@ -62,8 +62,11 @@ void test(int left[])
                 pipe(right);
                 if (fork() == 0)
                 {
-                    // close(left[0]);
+                    close(left[0]);
                     // close(left[1]);
+                    // 上面这个不能关了，关了会导致read(right[0])失败，具体原因不知。即使在真实的环境下也是如此。
+                    // MD，其实思路一开始是对的，只是上面这个问题导致调试了好久，艹！！！
+                    // 不知道是不是因为函数调用的关系，如果只在main中怎么操作应该能关的吧？
                     // fprintf(1, "right[0] = %d\n", right[0]);
                     // int bytes = read(right[0], &num, sizeof(num));
                     // fprintf(1, "read bytes %d\n", bytes);
@@ -72,7 +75,7 @@ void test(int left[])
                 }
                 else
                 {
-                    // close(right[0]);
+                    close(right[0]);
                 }
             }
             write(right[1], &num, 4);
@@ -83,7 +86,7 @@ void test(int left[])
         int end = 0;
         write(right[1], &end, sizeof(end));
         wait((int *)0);
-        // close(right[1]);
+        close(right[1]);
     }
     close(left[0]);
     return;
