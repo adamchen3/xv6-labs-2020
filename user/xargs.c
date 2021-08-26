@@ -4,13 +4,12 @@
 #include "kernel/fs.h"
 #include "kernel/param.h"
 
-void printInfo(int, char **);
-
-char buf[512];
+void exec2(char **);
 
 int main(int argc, char *argv[])
 {
     char *args[MAXARG];
+    char buf[512];
 
     for (int i = 1; i < argc; i++)
     {
@@ -19,35 +18,41 @@ int main(int argc, char *argv[])
 
     while (read(0, buf, sizeof(buf)) > 0)
     {
-        int len = argc - 1;
-        args[len++] = buf;
-        char *p = buf;
-        while(*p != '\n') {
-            p++;
-        }
-        args[argc - 1] = buf;
-        args[argc] = 0;
-
-        if (fork() > 0)
+        char a[512];
+        int index = 0;
+        for (int i = 0; i < sizeof(buf); i++)
         {
-            wait((int *)0);
-        }
-        else
-        {
-            // printInfo(argc, args);
-            exec(args[0], args);
-            // printf("exec failed!\n");
-            exit(1);
+            if (buf[i] == '\n')
+            {
+                if (index > 0)
+                {
+                    a[index] = '\0';
+                    args[argc - 1] = a;
+                    args[argc] = '\0';
+                    exec2(args);
+                }
+                index = 0;
+            }
+            else
+            {
+                a[index++] = buf[i];
+            }
         }
     }
 
     exit(0);
 }
 
-void printInfo(int len, char *str[])
+void exec2(char *argv[])
 {
-    for (int i = 0; i < len; i++)
+    if (fork() > 0)
     {
-        printf("%s\n", str[i]);
+        wait((int *)0);
+    }
+    else
+    {
+        exec(argv[0], argv);
+        printf("exec failed!\n");
+        exit(1);
     }
 }
