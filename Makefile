@@ -152,6 +152,7 @@ UPROGS=\
 	$U/_sleep\
 	$U/_pingpong\
 	$U/_primes\
+	$U/_find\
 
 
 ifeq ($(LAB),syscall)
@@ -307,7 +308,7 @@ myapi.key:
 
 .PHONY: handin tarball tarball-pref clean grade handin-check
 
-SEND_FILES = user/primes.c
+SEND_FILES = user/find.c
 REMOTE_IP = 115.159.69.199
 REMOTE_PATH = /root/xv6-labs-2020/
 send:
