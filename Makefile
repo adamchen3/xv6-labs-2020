@@ -317,3 +317,6 @@ send:
 
 sendMakefile:
 	scp Makefile root@$(REMOTE_IP):$(REMOTE_PATH)
+
+sendTime:
+	scp time.txt root@$(REMOTE_IP):$(REMOTE_PATH)
