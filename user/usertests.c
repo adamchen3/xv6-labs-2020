@@ -918,6 +918,7 @@ void
 forkforkfork(char *s)
 {
   unlink("stopforking");
+  printf("forkforkfork start\n");
 
   int pid = fork();
   if(pid < 0){
@@ -927,10 +928,13 @@ forkforkfork(char *s)
   if(pid == 0){
     while(1){
       int fd = open("stopforking", 0);
+      printf("pid: %d, fd: %d\n", getpid(), fd);
       if(fd >= 0){
+        printf("pid: %d, forkforkfork child exit\n", getpid());
         exit(0);
       }
       if(fork() < 0){
+        printf("pid: %d, forkforkfork create stopforking\n", getpid());
         close(open("stopforking", O_CREATE|O_RDWR));
       }
     }
@@ -938,10 +942,12 @@ forkforkfork(char *s)
     exit(0);
   }
 
-  sleep(20); // two seconds
+  printf("forkforkfork parent sleep begin\n");
+  sleep(2); // two seconds
   close(open("stopforking", O_CREATE|O_RDWR));
+  printf("forkforkfork parent wait begin\n");
   wait(0);
-  sleep(10); // one second
+  sleep(1); // one second
 }
 
 // regression test. does reparent() violate the parent-then-child
