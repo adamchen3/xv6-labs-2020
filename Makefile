@@ -150,6 +150,7 @@ UPROGS=\
 	$U/_wc\
 	$U/_zombie\
 	$U/_trace\
+	$U/_sysinfotest\
 
 
 
@@ -301,7 +302,7 @@ myapi.key:
 .PHONY: handin tarball tarball-pref clean grade handin-check
 
 USER_FILES = user/user.h user/usys.pl user/usertests.c
-KERNEL_FILES = kernel/syscall.h kernel/syscall.c kernel/sysproc.c kernel/proc.h kernel/proc.c
+KERNEL_FILES = kernel/syscall.h kernel/syscall.c kernel/sysproc.c kernel/proc.h kernel/proc.c kernel/defs.h kernel/kalloc.c
 REMOTE_IP = 115.159.69.199
 REMOTE_PATH = /root/xv6-labs-2020/
 sendUser:
