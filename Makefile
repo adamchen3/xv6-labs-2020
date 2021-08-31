@@ -301,7 +301,7 @@ myapi.key:
 .PHONY: handin tarball tarball-pref clean grade handin-check
 
 USER_FILES = user/user.h user/usys.pl
-KERNEL_FILES = kernel/syscall.h kernel/syscall.c kernel/sysproc.c
+KERNEL_FILES = kernel/syscall.h kernel/syscall.c kernel/sysproc.c kernel/proc.h kernel/proc.c
 REMOTE_IP = 115.159.69.199
 REMOTE_PATH = /root/xv6-labs-2020/
 sendUser:
