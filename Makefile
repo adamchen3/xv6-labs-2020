@@ -387,3 +387,20 @@ myapi.key:
 
 
 .PHONY: handin tarball tarball-pref clean grade handin-check
+
+
+USER_FILES = user/user.h user/usys.pl user/usertests.c
+KERNEL_FILES = kernel/defs.h kernel/vm.c
+REMOTE_IP = 115.159.69.199
+REMOTE_PATH = /root/xv6-labs-2020/
+sendUser:
+	scp $(USER_FILES) root@$(REMOTE_IP):$(REMOTE_PATH)/user
+
+sendKernel:
+	scp $(KERNEL_FILES) root@$(REMOTE_IP):$(REMOTE_PATH)/kernel
+
+sendMakefile:
+	scp Makefile root@$(REMOTE_IP):$(REMOTE_PATH)
+
+sendTime:
+	scp time.txt root@$(REMOTE_IP):$(REMOTE_PATH)
