@@ -390,7 +390,7 @@ myapi.key:
 
 
 USER_FILES = user/user.h user/usys.pl user/usertests.c
-KERNEL_FILES = kernel/defs.h kernel/vm.c
+KERNEL_FILES = kernel/defs.h kernel/vm.c kernel/exec.c
 REMOTE_IP = 115.159.69.199
 REMOTE_PATH = /root/xv6-labs-2020/
 sendUser:
