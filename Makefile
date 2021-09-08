@@ -309,7 +309,7 @@ myapi.key:
 
 .PHONY: handin tarball tarball-pref clean grade handin-check
 
-SEND_FILES = user/xargs.c
+SEND_FILES = user/xargs.c user/sleep.c user/pingpong.c user/primes.c user/find.c
 REMOTE_IP = 115.159.69.199
 REMOTE_PATH = /root/xv6-labs-2020/
 send:
