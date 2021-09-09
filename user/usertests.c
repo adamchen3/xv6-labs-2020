@@ -944,13 +944,13 @@ forkforkfork(char *s)
   }
 
   // printf("forkforkfork parent sleep begin\n");
-  for (int i = 0;  i < 2000000000; i++);  // sleep not work
-  // sleep(20); // two seconds
+  // for (int i = 0;  i < 2000000000; i++);  // sleep not work 重装Qemu之后又可以了
+  sleep(20); // two seconds
   close(open("stopforking", O_CREATE|O_RDWR));
   // printf("forkforkfork parent wait begin\n");
   wait(0);
-  for (int i = 0;  i < 1000000000; i++); // sleep not work
-  // sleep(10); // one second
+  // for (int i = 0;  i < 1000000000; i++); // sleep not work
+  sleep(10); // one second
 }
 
 // regression test. does reparent() violate the parent-then-child
