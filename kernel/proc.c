@@ -121,6 +121,16 @@ found:
     return 0;
   }
 
+  p->kpagetable = k_pagetable(p);
+  if (p->kpagetable == 0) {
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
+
+  // debugtbl(p->kpagetable);
+
+
   // Set up new context to start executing at forkret,
   // which returns to user space.
   memset(&p->context, 0, sizeof(p->context));
@@ -141,6 +151,8 @@ freeproc(struct proc *p)
   p->trapframe = 0;
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
+  if (p->kpagetable) {
+  }
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
@@ -151,6 +163,80 @@ freeproc(struct proc *p)
   p->xstate = 0;
   p->state = UNUSED;
 }
+
+void debugtbl(pagetable_t pagetable)
+{
+  printf("\n\nkernel pagetable:\n");
+  vmprint(pagetable);
+  printf("\n\n\n\n");
+}
+
+extern pagetable_t kernel_pagetable;
+extern char etext[];  // kernel.ld sets this to end of kernel code.
+// Create a kernel page table for a given process.
+pagetable_t
+k_pagetable(struct proc *p)
+{
+  pagetable_t pagetable;
+
+  pagetable = uvmcreate();
+  if (pagetable == 0) {
+    return 0;
+  }
+
+  // uart registers
+  if (mappages(pagetable, UART0, PGSIZE, UART0, PTE_R | PTE_W) < 0) {
+    uvmfree(pagetable, 0);
+    return 0;
+  }
+
+  // virtio mmio disk interface
+  if (mappages(pagetable, VIRTIO0, PGSIZE, VIRTIO0, PTE_R | PTE_W) < 0) {
+    uvmfree(pagetable, 0);
+    return 0;
+  }
+
+  // CLINT
+  if (mappages(pagetable, CLINT, PGSIZE, CLINT, PTE_R | PTE_W) < 0) {
+    uvmfree(pagetable, 0);
+    return 0;
+  }
+
+  // PLIC
+  if (mappages(pagetable, PLIC, PGSIZE, PLIC, PTE_R | PTE_W) < 0) {
+    uvmfree(pagetable, 0);
+    return 0;
+  }
+
+  // map kernel text executable and read-only.
+  if (mappages(pagetable, KERNBASE, (uint64)etext-KERNBASE, KERNBASE, PTE_R | PTE_X) < 0) {
+    uvmfree(pagetable, 0);
+    return 0;
+  }
+
+  // map kernel data and the physical RAM we'll make use of.
+  if (mappages(pagetable, (uint64)etext, PHYSTOP-(uint64)etext, (uint64)etext, PTE_R | PTE_W) < 0) {
+    uvmfree(pagetable, 0);
+    return 0;
+  }
+
+  // map the trampoline for trap entry/exit to
+  // the highest virtual address in the kernel.
+  if (mappages(pagetable, TRAMPOLINE, PGSIZE, (uint64)trampoline, PTE_R | PTE_X) < 0) {
+    uvmfree(pagetable, 0);
+    return 0;
+  }
+
+  char *pa = (char *)walkaddr(p->pagetable, p->kstack);
+  uint64 va = KSTACK((int) (p - proc));
+  if(mappages(pagetable, va, PGSIZE, (uint64)pa, PTE_R | PTE_W) < 0) {
+    uvmfree(pagetable, 0);
+    return 0;
+  }
+
+  return pagetable;
+}
+
 
 // Create a user page table for a given process,
 // with no user memory, but with trampoline pages.
@@ -474,6 +560,8 @@ scheduler(void)
         p->state = RUNNING;
         c->proc = p;
         swtch(&c->context, &p->context);
+        // w_satp(MAKE_SATP(p->kpagetable));
+        // sfence_vma();
 
         // Process is done running for now.
         // It should have changed its p->state before coming back.
@@ -485,6 +573,7 @@ scheduler(void)
     }
 #if !defined (LAB_FS)
     if(found == 0) {
+      kvminithart();
       intr_on();
       asm volatile("wfi");
     }
