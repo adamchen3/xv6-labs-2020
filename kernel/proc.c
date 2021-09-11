@@ -38,7 +38,9 @@ procinit(void)
       if(pa == 0)
         panic("kalloc");
       uint64 va = KSTACK((int) (p - proc));
+      // printf("wowowowowowowoowowowo:%p\n", p-proc);
       kvmmap(va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
+      // printf("init va is %p,  pa is %p\n\n", va, pa);
       p->kstack = va;
   }
   kvminithart();
@@ -151,8 +153,6 @@ freeproc(struct proc *p)
   p->trapframe = 0;
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
-  if (p->kpagetable) {
-  }
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
@@ -162,6 +162,11 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+
+  if (p->kpagetable) {
+    k_freepagetable(p->kpagetable);
+  }
+  p->kpagetable = 0;
 }
 
 void debugtbl(pagetable_t pagetable)
@@ -197,13 +202,13 @@ k_pagetable(struct proc *p)
   }
 
   // CLINT
-  if (mappages(pagetable, CLINT, PGSIZE, CLINT, PTE_R | PTE_W) < 0) {
+  if (mappages(pagetable, CLINT, 0x10000, CLINT, PTE_R | PTE_W) < 0) {
     uvmfree(pagetable, 0);
     return 0;
   }
 
   // PLIC
-  if (mappages(pagetable, PLIC, PGSIZE, PLIC, PTE_R | PTE_W) < 0) {
+  if (mappages(pagetable, PLIC, 0x400000, PLIC, PTE_R | PTE_W) < 0) {
     uvmfree(pagetable, 0);
     return 0;
   }
@@ -227,7 +232,8 @@ k_pagetable(struct proc *p)
     return 0;
   }
 
-  char *pa = (char *)walkaddr(p->pagetable, p->kstack);
+  char *pa = (char *)walkkaddr(kernel_pagetable, p->kstack);
+  // printf("wow va id %p, pa is %p\n\n\n\n", p->kstack, pa);
   uint64 va = KSTACK((int) (p - proc));
   if(mappages(pagetable, va, PGSIZE, (uint64)pa, PTE_R | PTE_W) < 0) {
     uvmfree(pagetable, 0);
@@ -279,6 +285,12 @@ proc_freepagetable(pagetable_t pagetable, uint64 sz)
   uvmunmap(pagetable, TRAMPOLINE, 1, 0);
   uvmunmap(pagetable, TRAPFRAME, 1, 0);
   uvmfree(pagetable, sz);
+}
+
+void
+k_freepagetable(pagetable_t pagetable)
+{
+  // uvmfree(pagetable, 0);
 }
 
 // a user program that calls exec("/init")
@@ -550,6 +562,7 @@ scheduler(void)
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
     
+    // kvminithart();
     int found = 0;
     for(p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
@@ -557,11 +570,14 @@ scheduler(void)
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
         // before jumping back to us.
-        p->state = RUNNING;
-        c->proc = p;
-        swtch(&c->context, &p->context);
+
         // w_satp(MAKE_SATP(p->kpagetable));
         // sfence_vma();
+
+        p->state = RUNNING;
+        c->proc = p;
+
+        swtch(&c->context, &p->context);
 
         // Process is done running for now.
         // It should have changed its p->state before coming back.
@@ -573,7 +589,6 @@ scheduler(void)
     }
 #if !defined (LAB_FS)
     if(found == 0) {
-      kvminithart();
       intr_on();
       asm volatile("wfi");
     }
