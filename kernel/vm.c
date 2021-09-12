@@ -166,7 +166,7 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
   pte_t *pte;
 
   a = PGROUNDDOWN(va);  // 将最后12位置0
-  last = PGROUNDDOWN(va + size - 1); // 这个size要大于4K，算出来的是才会跟a不一样，假如把最后12位去掉，就相当于加了1。
+  last = PGROUNDDOWN(va + size - 1);
   for(;;){
     if((pte = walk(pagetable, a, 1)) == 0)
       return -1;
@@ -297,11 +297,13 @@ freewalk(pagetable_t pagetable)
       freewalk((pagetable_t)child);
       pagetable[i] = 0;
     } else if(pte & PTE_V){
+      vmprint(pagetable);
       panic("freewalk: leaf");
     }
   }
   kfree((void*)pagetable);
 }
+
 
 // Free user memory pages,
 // then free page-table pages.
