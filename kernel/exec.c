@@ -19,6 +19,7 @@ exec(char *path, char **argv)
   struct inode *ip;
   struct proghdr ph;
   pagetable_t pagetable = 0, oldpagetable;
+  pagetable_t kpagetable = 0, oldkpagetable;
   struct proc *p = myproc();
 
   begin_op();
@@ -38,6 +39,10 @@ exec(char *path, char **argv)
   if((pagetable = proc_pagetable(p)) == 0)
     goto bad;
 
+  if ((kpagetable = k_pagetable(p)) == 0){
+    goto bad;
+  }
+
   // Load program into memory.
   for(i=0, off=elf.phoff; i<elf.phnum; i++, off+=sizeof(ph)){
     if(readi(ip, 0, (uint64)&ph, off, sizeof(ph)) != sizeof(ph))
@@ -49,10 +54,14 @@ exec(char *path, char **argv)
     if(ph.vaddr + ph.memsz < ph.vaddr)
       goto bad;
     uint64 sz1;
+    if((sz1 = uvmalloc(kpagetable, sz, ph.vaddr + ph.memsz)) == 0)
+      goto bad;
     if((sz1 = uvmalloc(pagetable, sz, ph.vaddr + ph.memsz)) == 0)
       goto bad;
     sz = sz1;
     if(ph.vaddr % PGSIZE != 0)
+      goto bad;
+    if(loadseg(kpagetable, ph.vaddr, ip, ph.off, ph.filesz) < 0)
       goto bad;
     if(loadseg(pagetable, ph.vaddr, ip, ph.off, ph.filesz) < 0)
       goto bad;
@@ -68,9 +77,12 @@ exec(char *path, char **argv)
   // Use the second as the user stack.
   sz = PGROUNDUP(sz);
   uint64 sz1;
+  if((sz1 = uvmalloc(kpagetable, sz, sz + 2*PGSIZE)) == 0)
+    goto bad;
   if((sz1 = uvmalloc(pagetable, sz, sz + 2*PGSIZE)) == 0)
     goto bad;
   sz = sz1;
+  uvmclear(kpagetable, sz-2*PGSIZE);
   uvmclear(pagetable, sz-2*PGSIZE);
   sp = sz;
   stackbase = sp - PGSIZE;
@@ -83,6 +95,8 @@ exec(char *path, char **argv)
     sp -= sp % 16; // riscv sp must be 16-byte aligned
     if(sp < stackbase)
       goto bad;
+    if(copyout(kpagetable, sp, argv[argc], strlen(argv[argc]) + 1) < 0)
+      goto bad;
     if(copyout(pagetable, sp, argv[argc], strlen(argv[argc]) + 1) < 0)
       goto bad;
     ustack[argc] = sp;
@@ -93,6 +107,8 @@ exec(char *path, char **argv)
   sp -= (argc+1) * sizeof(uint64);
   sp -= sp % 16;
   if(sp < stackbase)
+    goto bad;
+  if(copyout(kpagetable, sp, (char *)ustack, (argc+1)*sizeof(uint64)) < 0)
     goto bad;
   if(copyout(pagetable, sp, (char *)ustack, (argc+1)*sizeof(uint64)) < 0)
     goto bad;
@@ -116,6 +132,10 @@ exec(char *path, char **argv)
   p->trapframe->sp = sp; // initial stack pointer
   proc_freepagetable(oldpagetable, oldsz);
 
+  oldkpagetable = p->kpagetable;
+  p->kpagetable = kpagetable;
+  k_freepagetable(oldkpagetable);
+
   if (p->pid == 1) {
     vmprint(p->pagetable);
   }
@@ -124,6 +144,9 @@ exec(char *path, char **argv)
  bad:
   if(pagetable)
     proc_freepagetable(pagetable, sz);
+  if(kpagetable){
+    k_freepagetable(kpagetable);
+  }
   if(ip){
     iunlockput(ip);
     end_op();

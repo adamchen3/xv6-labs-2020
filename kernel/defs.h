@@ -185,6 +185,10 @@ void            vmprint(pagetable_t);
 uint64          walkkaddr(pagetable_t, uint64);
 void            freewalk(pagetable_t);
 
+// vmcopyin.c
+int             copyin_new(pagetable_t, char *, uint64, uint64);
+int             copyinstr_new(pagetable_t, char *, uint64, uint64);
+
 // plic.c
 void            plicinit(void);
 void            plicinithart(void);
