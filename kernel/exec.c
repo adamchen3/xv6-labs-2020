@@ -8,6 +8,7 @@
 #include "elf.h"
 
 static int loadseg(pde_t *pgdir, uint64 addr, struct inode *ip, uint offset, uint sz);
+static int kloadseg(pde_t *pgdir, uint64 addr, struct inode *ip, uint offset, uint sz);
 
 int
 exec(char *path, char **argv)
@@ -54,14 +55,14 @@ exec(char *path, char **argv)
     if(ph.vaddr + ph.memsz < ph.vaddr)
       goto bad;
     uint64 sz1;
-    if((sz1 = uvmalloc(kpagetable, sz, ph.vaddr + ph.memsz)) == 0)
+    if((sz1 = kuvmalloc(kpagetable, sz, ph.vaddr + ph.memsz)) == 0)
       goto bad;
     if((sz1 = uvmalloc(pagetable, sz, ph.vaddr + ph.memsz)) == 0)
       goto bad;
     sz = sz1;
     if(ph.vaddr % PGSIZE != 0)
       goto bad;
-    if(loadseg(kpagetable, ph.vaddr, ip, ph.off, ph.filesz) < 0)
+    if(kloadseg(kpagetable, ph.vaddr, ip, ph.off, ph.filesz) < 0)
       goto bad;
     if(loadseg(pagetable, ph.vaddr, ip, ph.off, ph.filesz) < 0)
       goto bad;
@@ -77,7 +78,7 @@ exec(char *path, char **argv)
   // Use the second as the user stack.
   sz = PGROUNDUP(sz);
   uint64 sz1;
-  if((sz1 = uvmalloc(kpagetable, sz, sz + 2*PGSIZE)) == 0)
+  if((sz1 = kuvmalloc(kpagetable, sz, sz + 2*PGSIZE)) == 0)
     goto bad;
   if((sz1 = uvmalloc(pagetable, sz, sz + 2*PGSIZE)) == 0)
     goto bad;
@@ -176,6 +177,30 @@ loadseg(pagetable_t pagetable, uint64 va, struct inode *ip, uint offset, uint sz
     else
       n = PGSIZE;
     if(readi(ip, 0, (uint64)pa, offset+i, n) != n)
+      return -1;
+  }
+  
+  return 0;
+}
+
+static int
+kloadseg(pagetable_t pagetable, uint64 va, struct inode *ip, uint offset, uint sz)
+{
+  uint i, n;
+  // uint64 pa;
+
+  if((va % PGSIZE) != 0)
+    panic("kloadseg: va must be page aligned");
+
+  for(i = 0; i < sz; i += PGSIZE){
+    // pa = walkaddr(pagetable, va + i);
+    // if(pa == 0)
+      // panic("kloadseg: address should exist");
+    if(sz - i < PGSIZE)
+      n = sz - i;
+    else
+      n = PGSIZE;
+    if(readi(ip, 0, (uint64)va+i, offset+i, n) != n)
       return -1;
   }
   
