@@ -96,8 +96,8 @@ exec(char *path, char **argv)
     sp -= sp % 16; // riscv sp must be 16-byte aligned
     if(sp < stackbase)
       goto bad;
-    if(copyout(kpagetable, sp, argv[argc], strlen(argv[argc]) + 1) < 0)
-      goto bad;
+    // if(copyout(kpagetable, sp, argv[argc], strlen(argv[argc]) + 1) < 0)
+      // goto bad;
     if(copyout(pagetable, sp, argv[argc], strlen(argv[argc]) + 1) < 0)
       goto bad;
     ustack[argc] = sp;
@@ -109,8 +109,8 @@ exec(char *path, char **argv)
   sp -= sp % 16;
   if(sp < stackbase)
     goto bad;
-  if(copyout(kpagetable, sp, (char *)ustack, (argc+1)*sizeof(uint64)) < 0)
-    goto bad;
+  // if(copyout(kpagetable, sp, (char *)ustack, (argc+1)*sizeof(uint64)) < 0)
+    // goto bad;
   if(copyout(pagetable, sp, (char *)ustack, (argc+1)*sizeof(uint64)) < 0)
     goto bad;
 
@@ -135,7 +135,7 @@ exec(char *path, char **argv)
 
   oldkpagetable = p->kpagetable;
   p->kpagetable = kpagetable;
-  k_freepagetable(oldkpagetable);
+  k_freepagetable(oldkpagetable, oldsz);
 
   if (p->pid == 1) {
     vmprint(p->pagetable);
@@ -146,7 +146,7 @@ exec(char *path, char **argv)
   if(pagetable)
     proc_freepagetable(pagetable, sz);
   if(kpagetable){
-    k_freepagetable(kpagetable);
+    k_freepagetable(kpagetable, sz);
   }
   if(ip){
     iunlockput(ip);

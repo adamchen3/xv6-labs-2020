@@ -153,7 +153,7 @@ static void
 freeproc(struct proc *p)
 {
   if (p->kpagetable) {
-    k_freepagetable(p->kpagetable);
+    k_freepagetable(p->kpagetable, p->sz);
   }
   p->kpagetable = 0;
 
@@ -295,22 +295,41 @@ proc_freepagetable(pagetable_t pagetable, uint64 sz)
 }
 
 void
-k_freepagetable(pagetable_t pagetable)
+k_freepagetable(pagetable_t pagetable, uint64 sz)
 {
-  for (int i = 0; i < 512; i++) {
-    pte_t pte = *(pagetable + i);
-    if (pte & PTE_V) {
-      for (int j = 0; j < 512; j++) {
-        pte_t pte2 = *((pagetable_t)PTE2PA(pte) + j);
-        if (pte2 & PTE_V) {
-          for (int k = 0; k < 512; k++) {
-            *((pagetable_t)PTE2PA(pte2) + k) = 0;
-          }
-        }
-      }
-    }
-  }
-  freewalk(pagetable);
+  // uvmunmap(pagetable, UART0, 1, 0);
+  // uvmunmap(pagetable, VIRTIO0, 1, 0);
+  // uvmunmap(pagetable, CLINT, 0x10000/PGSIZE, 0);
+  // uvmunmap(pagetable, PLIC, 0x400000/PGSIZE, 0);
+  // uvmunmap(pagetable, KERNBASE, ((uint64)etext-KERNBASE)/PGSIZE, 0);
+  // uvmunmap(pagetable, (uint64)etext, (PHYSTOP-(uint64)etext)/PGSIZE, 0);
+  // uvmunmap(pagetable, TRAMPOLINE, 1, 0);
+
+  // struct proc *tp;
+  // for (tp = proc; tp < &proc[NPROC]; tp++) {
+  //   uint64 va = KSTACK((int) (tp - proc));
+  //   uvmunmap(pagetable, va, 1, 0);
+  // }
+  // uvmunmap(pagetable, TRAMPOLINE, 1, 0);
+  // uvmunmap(pagetable, TRAPFRAME, 1, 0);
+  // uvmfree(pagetable, sz);
+
+
+  // for (int i = 0; i < 512; i++) {
+  //   pte_t pte = *(pagetable + i);
+  //   if (pte & PTE_V) {
+  //     for (int j = 0; j < 512; j++) {
+  //       pte_t pte2 = *((pagetable_t)PTE2PA(pte) + j);
+  //       if (pte2 & PTE_V) {
+  //         for (int k = 0; k < 512; k++) {
+  //           printf("i:%d j:%d k:%d\n", i, j, k);
+  //           *((pagetable_t)PTE2PA(pte2) + k) = 0;
+  //         }
+  //       }
+  //     }
+  //   }
+  // }
+  // freewalk(pagetable);
 }
 
 // a user program that calls exec("/init")
