@@ -135,7 +135,7 @@ exec(char *path, char **argv)
 
   // oldkpagetable = p->kpagetable;
   // p->kpagetable = kpagetable;
-  // k_freepagetable(oldkpagetable, oldsz);
+  // k_freepagetable(oldkpagetable);
 
   if (p->pid == 1) {
     vmprint(p->pagetable);
@@ -146,7 +146,7 @@ exec(char *path, char **argv)
   if(pagetable)
     proc_freepagetable(pagetable, sz);
   // if(kpagetable){
-  //   k_freepagetable(kpagetable, sz);
+  //   k_freepagetable(kpagetable);
   // }
   if(ip){
     iunlockput(ip);

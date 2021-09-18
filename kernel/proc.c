@@ -153,7 +153,7 @@ static void
 freeproc(struct proc *p)
 {
   if (p->kpagetable) {
-    k_freepagetable(p->kpagetable, p->sz);
+    k_freepagetable(p->kpagetable);
   }
   p->kpagetable = 0;
 
@@ -296,7 +296,7 @@ proc_freepagetable(pagetable_t pagetable, uint64 sz)
 }
 
 void
-k_freepagetable(pagetable_t pagetable, uint64 sz)
+k_freepagetable(pagetable_t pagetable)
 {
   pte_t pte = pagetable[0];
   if (pte & PTE_V) {
