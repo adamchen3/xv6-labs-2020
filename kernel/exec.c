@@ -20,7 +20,7 @@ exec(char *path, char **argv)
   struct inode *ip;
   struct proghdr ph;
   pagetable_t pagetable = 0, oldpagetable;
-  // pagetable_t kpagetable = 0, oldkpagetable;
+  pagetable_t kpagetable = 0, oldkpagetable;
   struct proc *p = myproc();
 
   begin_op();
@@ -40,9 +40,9 @@ exec(char *path, char **argv)
   if((pagetable = proc_pagetable(p)) == 0)
     goto bad;
 
-  // if ((kpagetable = k_pagetable(p)) == 0){
-  //   goto bad;
-  // }
+  if ((kpagetable = k_pagetable(p)) == 0){
+    goto bad;
+  }
 
   // Load program into memory.
   for(i=0, off=elf.phoff; i<elf.phnum; i++, off+=sizeof(ph)){
@@ -57,7 +57,7 @@ exec(char *path, char **argv)
     uint64 sz1;
     // if((sz1 = kuvmalloc(kpagetable, sz, ph.vaddr + ph.memsz)) == 0)
       // goto bad;
-    if((sz1 = uvmalloc(pagetable, sz, ph.vaddr + ph.memsz)) == 0)
+    if((sz1 = uvmalloc(pagetable, kpagetable, sz, ph.vaddr + ph.memsz)) == 0)
       goto bad;
     sz = sz1;
     if(ph.vaddr % PGSIZE != 0)
@@ -80,7 +80,7 @@ exec(char *path, char **argv)
   uint64 sz1;
   // if((sz1 = kuvmalloc(kpagetable, sz, sz + 2*PGSIZE)) == 0)
   //   goto bad;
-  if((sz1 = uvmalloc(pagetable, sz, sz + 2*PGSIZE)) == 0)
+  if((sz1 = uvmalloc(pagetable, kpagetable, sz, sz + 2*PGSIZE)) == 0)
     goto bad;
   sz = sz1;
   // uvmclear(kpagetable, sz-2*PGSIZE);
@@ -133,9 +133,15 @@ exec(char *path, char **argv)
   p->trapframe->sp = sp; // initial stack pointer
   proc_freepagetable(oldpagetable, oldsz);
 
-  // oldkpagetable = p->kpagetable;
-  // p->kpagetable = kpagetable;
-  // k_freepagetable(oldkpagetable);
+  oldkpagetable = p->kpagetable;
+  p->kpagetable = kpagetable;
+
+  /** IMPORTANT!!!**/
+  w_satp(MAKE_SATP(p->kpagetable));
+  sfence_vma();
+  /**如果不设置新的satp，那么free掉旧的kpagetable，MMU访问的地址都是不合法的**/
+
+  k_freepagetable(oldkpagetable);
 
   if (p->pid == 1) {
     vmprint(p->pagetable);
@@ -145,9 +151,9 @@ exec(char *path, char **argv)
  bad:
   if(pagetable)
     proc_freepagetable(pagetable, sz);
-  // if(kpagetable){
-  //   k_freepagetable(kpagetable);
-  // }
+  if(kpagetable){
+    k_freepagetable(kpagetable);
+  }
   if(ip){
     iunlockput(ip);
     end_op();

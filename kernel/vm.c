@@ -253,7 +253,7 @@ kuvminit(pagetable_t pagetable, uchar *src, uint sz)
 // Allocate PTEs and physical memory to grow process from oldsz to
 // newsz, which need not be page aligned.  Returns new size or 0 on error.
 uint64
-uvmalloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
+uvmalloc(pagetable_t pagetable, pagetable_t kpagetable, uint64 oldsz, uint64 newsz)
 {
   char *mem;
   uint64 a;
@@ -274,6 +274,8 @@ uvmalloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
       uvmdealloc(pagetable, a, oldsz);
       return 0;
     }
+
+    mappages(kpagetable, a, PGSIZE, (uint64)mem, PTE_W|PTE_X|PTE_R);
   }
   return newsz;
 }
@@ -435,8 +437,8 @@ int
 copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 {
   // printf("pt:%p dst:%p va:%x len:%d\n", pagetable, dst, srcva, len);
-  // return copyin_new(pagetable, dst, srcva, len);
-  /**/
+  return copyin_new(pagetable, dst, srcva, len);
+  /*
   uint64 n, va0, pa0;
 
   while(len > 0){
@@ -454,7 +456,7 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
     srcva = va0 + PGSIZE;
   }
   return 0;
-  /**/
+  */
 }
 
 // Copy a null-terminated string from user to kernel.
