@@ -208,10 +208,10 @@ k_pagetable(struct proc *p)
     return 0;
   }
   // CLINT
-  if (mappages(pagetable, CLINT, 0x10000, CLINT, PTE_R | PTE_W) < 0) {
-    printf("kernel page table map faild: 2\n");
-    return 0;
-  }
+  // if (mappages(pagetable, CLINT, 0x10000, CLINT, PTE_R | PTE_W) < 0) {
+  //   printf("kernel page table map faild: 2\n");
+  //   return 0;
+  // }
   // PLIC
   if (mappages(pagetable, PLIC, 0x400000, PLIC, PTE_R | PTE_W) < 0) {
     printf("kernel page table map faild: 3\n");
@@ -423,7 +423,7 @@ fork(void)
   }
 
   // Copy user memory from parent to child.
-  if(uvmcopy(p->pagetable, np->pagetable, p->sz) < 0){
+  if(uvmcopy(p->pagetable, np->pagetable, np->kpagetable, p->sz) < 0){
     freeproc(np);
     release(&np->lock);
     return -1;
