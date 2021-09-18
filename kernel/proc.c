@@ -193,59 +193,60 @@ k_pagetable(struct proc *p)
     return 0;
   }
 
+  for (int i = 1; i < 512; i++) {
+    pagetable[i] = kernel_pagetable[i];
+  }
+
   // uart registers
   if (mappages(pagetable, UART0, PGSIZE, UART0, PTE_R | PTE_W) < 0) {
     printf("kernel page table map faild: 0\n");
     return 0;
   }
-
   // virtio mmio disk interface
   if (mappages(pagetable, VIRTIO0, PGSIZE, VIRTIO0, PTE_R | PTE_W) < 0) {
     printf("kernel page table map faild: 1\n");
     return 0;
   }
-
   // CLINT
   if (mappages(pagetable, CLINT, 0x10000, CLINT, PTE_R | PTE_W) < 0) {
     printf("kernel page table map faild: 2\n");
     return 0;
   }
-
   // PLIC
   if (mappages(pagetable, PLIC, 0x400000, PLIC, PTE_R | PTE_W) < 0) {
     printf("kernel page table map faild: 3\n");
     return 0;
   }
 
-  // map kernel text executable and read-only.
-  if (mappages(pagetable, KERNBASE, (uint64)etext-KERNBASE, KERNBASE, PTE_R | PTE_X) < 0) {
-    printf("kernel page table map faild: 4\n");
-    return 0;
-  }
+  // // map kernel text executable and read-only.
+  // if (mappages(pagetable, KERNBASE, (uint64)etext-KERNBASE, KERNBASE, PTE_R | PTE_X) < 0) {
+  //   printf("kernel page table map faild: 4\n");
+  //   return 0;
+  // }
 
-  // map kernel data and the physical RAM we'll make use of.
-  if (mappages(pagetable, (uint64)etext, PHYSTOP-(uint64)etext, (uint64)etext, PTE_R | PTE_W) < 0) {
-    printf("kernel page table map faild: 5\n");
-    return 0;
-  }
+  // // map kernel data and the physical RAM we'll make use of.
+  // if (mappages(pagetable, (uint64)etext, PHYSTOP-(uint64)etext, (uint64)etext, PTE_R | PTE_W) < 0) {
+  //   printf("kernel page table map faild: 5\n");
+  //   return 0;
+  // }
 
-  // map the trampoline for trap entry/exit to
-  // the highest virtual address in the kernel.
-  if (mappages(pagetable, TRAMPOLINE, PGSIZE, (uint64)trampoline, PTE_R | PTE_X) < 0) {
-    printf("kernel page table map faild: 6\n");
-    return 0;
-  }
+  // // map the trampoline for trap entry/exit to
+  // // the highest virtual address in the kernel.
+  // if (mappages(pagetable, TRAMPOLINE, PGSIZE, (uint64)trampoline, PTE_R | PTE_X) < 0) {
+  //   printf("kernel page table map faild: 6\n");
+  //   return 0;
+  // }
 
-  struct proc *tp;
-  for (tp = proc; tp < &proc[NPROC]; tp++) {
-    char *pa = (char *)walkkaddr(kernel_pagetable, tp->kstack);
-    // printf("wow va id %p, pa is %p\n\n\n\n", tp->kstack, pa);
-    uint64 va = KSTACK((int) (tp - proc));
-    if(mappages(pagetable, va, PGSIZE, (uint64)pa, PTE_R | PTE_W) < 0) {
-      printf("kernel page table map faild: 7\n");
-      return 0;
-    }
-  }
+  // struct proc *tp;
+  // for (tp = proc; tp < &proc[NPROC]; tp++) {
+  //   char *pa = (char *)walkkaddr(kernel_pagetable, tp->kstack);
+  //   // printf("wow va id %p, pa is %p\n\n\n\n", tp->kstack, pa);
+  //   uint64 va = KSTACK((int) (tp - proc));
+  //   if(mappages(pagetable, va, PGSIZE, (uint64)pa, PTE_R | PTE_W) < 0) {
+  //     printf("kernel page table map faild: 7\n");
+  //     return 0;
+  //   }
+  // }
 
   return pagetable;
 }
@@ -297,6 +298,18 @@ proc_freepagetable(pagetable_t pagetable, uint64 sz)
 void
 k_freepagetable(pagetable_t pagetable, uint64 sz)
 {
+  pte_t pte = pagetable[0];
+  if (pte & PTE_V) {
+    for (int j = 0; j < 512; j++) {
+      pte_t pte2 = *((pagetable_t)PTE2PA(pte) + j);
+      if (pte2 & PTE_V) {
+        kfree((void*)PTE2PA(pte2));
+      }
+    }
+  }
+  kfree((void *)PTE2PA(pte));
+  kfree((void *)pagetable);
+
   // uvmunmap(pagetable, UART0, 1, 0);
   // uvmunmap(pagetable, VIRTIO0, 1, 0);
   // uvmunmap(pagetable, CLINT, 0x10000/PGSIZE, 0);
@@ -384,11 +397,11 @@ growproc(int n)
     if ((sz = uvmalloc(p->pagetable, sz, sz + n)) == 0) {
       return -1;
     }
-    if ((sz = kuvmalloc(p->kpagetable, sz, sz+n)) == 0) {
-      return -1;
-    }
+    // if ((sz = kuvmalloc(p->kpagetable, sz, sz+n)) == 0) {
+    //   return -1;
+    // }
   } else if(n < 0){
-    uvmdealloc(p->kpagetable, sz, sz+n);
+    // uvmdealloc(p->kpagetable, sz, sz+n);
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
   p->sz = sz;
@@ -416,11 +429,11 @@ fork(void)
     return -1;
   }
 
-  if (uvmcopy(p->kpagetable, np->kpagetable, p->sz) < 0) {
-    freeproc(np);
-    release(&np->lock);
-    return -1;
-  }
+  // if (uvmcopy(p->kpagetable, np->kpagetable, p->sz) < 0) {
+  //   freeproc(np);
+  //   release(&np->lock);
+  //   return -1;
+  // }
 
   np->sz = p->sz;
 
@@ -613,7 +626,6 @@ scheduler(void)
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
     
-    kvminithart();
     int found = 0;
     for(p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
@@ -634,6 +646,8 @@ scheduler(void)
         // Process is done running for now.
         // It should have changed its p->state before coming back.
         c->proc = 0;
+
+        kvminithart();
 
         found = 1;
       }

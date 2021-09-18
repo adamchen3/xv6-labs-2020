@@ -8,7 +8,7 @@
 #include "elf.h"
 
 static int loadseg(pde_t *pgdir, uint64 addr, struct inode *ip, uint offset, uint sz);
-static int kloadseg(pde_t *pgdir, uint64 addr, struct inode *ip, uint offset, uint sz);
+// static int kloadseg(pde_t *pgdir, uint64 addr, struct inode *ip, uint offset, uint sz);
 
 int
 exec(char *path, char **argv)
@@ -20,7 +20,7 @@ exec(char *path, char **argv)
   struct inode *ip;
   struct proghdr ph;
   pagetable_t pagetable = 0, oldpagetable;
-  pagetable_t kpagetable = 0, oldkpagetable;
+  // pagetable_t kpagetable = 0, oldkpagetable;
   struct proc *p = myproc();
 
   begin_op();
@@ -40,9 +40,9 @@ exec(char *path, char **argv)
   if((pagetable = proc_pagetable(p)) == 0)
     goto bad;
 
-  if ((kpagetable = k_pagetable(p)) == 0){
-    goto bad;
-  }
+  // if ((kpagetable = k_pagetable(p)) == 0){
+  //   goto bad;
+  // }
 
   // Load program into memory.
   for(i=0, off=elf.phoff; i<elf.phnum; i++, off+=sizeof(ph)){
@@ -55,15 +55,15 @@ exec(char *path, char **argv)
     if(ph.vaddr + ph.memsz < ph.vaddr)
       goto bad;
     uint64 sz1;
-    if((sz1 = kuvmalloc(kpagetable, sz, ph.vaddr + ph.memsz)) == 0)
-      goto bad;
+    // if((sz1 = kuvmalloc(kpagetable, sz, ph.vaddr + ph.memsz)) == 0)
+      // goto bad;
     if((sz1 = uvmalloc(pagetable, sz, ph.vaddr + ph.memsz)) == 0)
       goto bad;
     sz = sz1;
     if(ph.vaddr % PGSIZE != 0)
       goto bad;
-    if(kloadseg(kpagetable, ph.vaddr, ip, ph.off, ph.filesz) < 0)
-      goto bad;
+    // if(kloadseg(kpagetable, ph.vaddr, ip, ph.off, ph.filesz) < 0)
+    //   goto bad;
     if(loadseg(pagetable, ph.vaddr, ip, ph.off, ph.filesz) < 0)
       goto bad;
   }
@@ -78,12 +78,12 @@ exec(char *path, char **argv)
   // Use the second as the user stack.
   sz = PGROUNDUP(sz);
   uint64 sz1;
-  if((sz1 = kuvmalloc(kpagetable, sz, sz + 2*PGSIZE)) == 0)
-    goto bad;
+  // if((sz1 = kuvmalloc(kpagetable, sz, sz + 2*PGSIZE)) == 0)
+  //   goto bad;
   if((sz1 = uvmalloc(pagetable, sz, sz + 2*PGSIZE)) == 0)
     goto bad;
   sz = sz1;
-  uvmclear(kpagetable, sz-2*PGSIZE);
+  // uvmclear(kpagetable, sz-2*PGSIZE);
   uvmclear(pagetable, sz-2*PGSIZE);
   sp = sz;
   stackbase = sp - PGSIZE;
@@ -133,9 +133,9 @@ exec(char *path, char **argv)
   p->trapframe->sp = sp; // initial stack pointer
   proc_freepagetable(oldpagetable, oldsz);
 
-  oldkpagetable = p->kpagetable;
-  p->kpagetable = kpagetable;
-  k_freepagetable(oldkpagetable, oldsz);
+  // oldkpagetable = p->kpagetable;
+  // p->kpagetable = kpagetable;
+  // k_freepagetable(oldkpagetable, oldsz);
 
   if (p->pid == 1) {
     vmprint(p->pagetable);
@@ -145,9 +145,9 @@ exec(char *path, char **argv)
  bad:
   if(pagetable)
     proc_freepagetable(pagetable, sz);
-  if(kpagetable){
-    k_freepagetable(kpagetable, sz);
-  }
+  // if(kpagetable){
+  //   k_freepagetable(kpagetable, sz);
+  // }
   if(ip){
     iunlockput(ip);
     end_op();
@@ -183,26 +183,26 @@ loadseg(pagetable_t pagetable, uint64 va, struct inode *ip, uint offset, uint sz
   return 0;
 }
 
-static int
-kloadseg(pagetable_t pagetable, uint64 va, struct inode *ip, uint offset, uint sz)
-{
-  uint i, n;
-  // uint64 pa;
+// static int
+// kloadseg(pagetable_t pagetable, uint64 va, struct inode *ip, uint offset, uint sz)
+// {
+//   uint i, n;
+//   // uint64 pa;
 
-  if((va % PGSIZE) != 0)
-    panic("kloadseg: va must be page aligned");
+//   if((va % PGSIZE) != 0)
+//     panic("kloadseg: va must be page aligned");
 
-  for(i = 0; i < sz; i += PGSIZE){
-    // pa = walkaddr(pagetable, va + i);
-    // if(pa == 0)
-      // panic("kloadseg: address should exist");
-    if(sz - i < PGSIZE)
-      n = sz - i;
-    else
-      n = PGSIZE;
-    if(readi(ip, 0, (uint64)va+i, offset+i, n) != n)
-      return -1;
-  }
+//   for(i = 0; i < sz; i += PGSIZE){
+//     // pa = walkaddr(pagetable, va + i);
+//     // if(pa == 0)
+//       // panic("kloadseg: address should exist");
+//     if(sz - i < PGSIZE)
+//       n = sz - i;
+//     else
+//       n = PGSIZE;
+//     if(readi(ip, 0, (uint64)va+i, offset+i, n) != n)
+//       return -1;
+//   }
   
-  return 0;
-}
+//   return 0;
+// }
