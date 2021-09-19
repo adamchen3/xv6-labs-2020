@@ -206,7 +206,25 @@ proc_kpagetable()
     return 0;
   }
 
-  for (int i = 0; i < 512; i++) {
+  pagetable_t pte_pagetable = uvmcreate();
+  if (pte_pagetable == 0) {
+    kfree((void *)pagetable);
+    return 0;
+  }
+
+  pte_t pte = kernel_pagetable[0];
+  uint64 pa = PTE2PA(pte);
+  /**
+   * @brief 
+   * 0-95 used for user page table
+   */
+  for (int i = 96; i < 512; i++)  {
+    pte = *((pagetable_t)pa + i);
+    pte_pagetable[i] = pte;
+  }
+  pagetable[0] = PA2PTE(pte_pagetable) | PTE_V;
+
+  for (int i = 1; i < 512; i++) {
     pagetable[i] = kernel_pagetable[i];
   }
 
@@ -223,10 +241,30 @@ proc_freepagetable(pagetable_t pagetable, uint64 sz)
   uvmfree(pagetable, sz);
 }
 
-
-void proc_freekpagetable(pagetable_t pagetable)
+// todo: 还可以继续优化以提高性能
+void
+proc_freekpagetable(pagetable_t pagetable)
 {
-  kfree((void *)pagetable);
+  /** 0x40000000 - MAXVAL **/
+  for (int i = 1; i < 512; i++) {
+    pagetable[i] = 0;
+  }
+
+  /** 0xc000000 - 0x40000000 **/
+  uint64 pa = PTE2PA(pagetable[0]);
+  for (int i = 96; i < 512; i++)  {
+    *((pagetable_t)pa + i) = 0;
+  }
+
+  /** 0x0 - 0xc000000 **/
+  for (uint64 va = 0; va < PLIC; va+=PGSIZE) {
+    pte_t *pte = walk(pagetable, va, 0);
+    if (pte != 0) {
+      *pte = 0;
+    }
+  }
+
+  freewalk(pagetable);
 }
 
 // a user program that calls exec("/init")
@@ -254,6 +292,8 @@ userinit(void)
   // and data into it.
   uvminit(p->pagetable, initcode, sizeof(initcode));
   p->sz = PGSIZE;
+
+  kvmcopy(p->kpagetable, p->pagetable, 0, p->sz);
 
   // prepare for the very first "return" from kernel to user.
   p->trapframe->epc = 0;      // user program counter
@@ -283,6 +323,7 @@ growproc(int n)
   } else if(n < 0){
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
+  kvmcopy(p->kpagetable, p->pagetable, p->sz, sz);
   p->sz = sz;
   return 0;
 }
@@ -307,7 +348,11 @@ fork(void)
     release(&np->lock);
     return -1;
   }
+
+  kvmcopy(np->kpagetable, np->pagetable, np->sz, p->sz);
+
   np->sz = p->sz;
+
 
   np->parent = p;
 

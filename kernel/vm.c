@@ -342,6 +342,19 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
   return -1;
 }
 
+void kvmcopy(pagetable_t kpagetable, pagetable_t pagetable, uint64 oldsz, uint64 newsz)
+{
+  if (newsz >= PLIC) {
+    panic("kvmcopy: size too large");
+  }
+  for (uint64 va = oldsz; va <= newsz; va+=PGSIZE) {
+    pte_t *pte = walk(pagetable, va, 0);
+    if (pte != 0) {
+      *walk(kpagetable, va, 1) = (*pte & ~(PTE_W | PTE_X | PTE_U));
+    }
+  }
+}
+
 // mark a PTE invalid for user access.
 // used by exec for the user stack guard page.
 void
@@ -386,6 +399,8 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 int
 copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 {
+  return copyin_new(pagetable, dst, srcva, len);
+  /**
   uint64 n, va0, pa0;
 
   while(len > 0){
@@ -403,6 +418,7 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
     srcva = va0 + PGSIZE;
   }
   return 0;
+  */
 }
 
 // Copy a null-terminated string from user to kernel.
@@ -412,6 +428,8 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 int
 copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 {
+  return copyinstr_new(pagetable, dst, srcva, max);
+  /**
   uint64 n, va0, pa0;
   int got_null = 0;
 
@@ -446,6 +464,7 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
   } else {
     return -1;
   }
+  */
 }
 
 
