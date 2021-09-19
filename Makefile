@@ -391,6 +391,7 @@ myapi.key:
 
 USER_FILES = user/user.h user/usys.pl user/usertests.c
 KERNEL_FILES = kernel/defs.h kernel/vm.c kernel/exec.c kernel/proc.h kernel/proc.c
+TXT_FILES = time.txt answers-pgtbl.txt
 REMOTE_IP = 115.159.69.199
 REMOTE_PATH = /root/xv6-labs-2020/
 sendUser:
@@ -402,5 +403,5 @@ sendKernel:
 sendMakefile:
 	scp Makefile root@$(REMOTE_IP):$(REMOTE_PATH)
 
-sendTime:
-	scp time.txt root@$(REMOTE_IP):$(REMOTE_PATH)
+sendTxt:
+	scp $(TXT_FILES) root@$(REMOTE_IP):$(REMOTE_PATH)
