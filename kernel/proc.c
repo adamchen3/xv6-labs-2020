@@ -242,29 +242,43 @@ proc_freepagetable(pagetable_t pagetable, uint64 sz)
 }
 
 // todo: 还可以继续优化以提高性能
+// 优化了一下
+// 继续优化的话，就加多个size参数，根据size去释放内存
+// 那么在kvmcopy那里也需要做相应的修改
 void
 proc_freekpagetable(pagetable_t pagetable)
 {
   /** 0x40000000 - MAXVAL **/
-  for (int i = 1; i < 512; i++) {
-    pagetable[i] = 0;
-  }
+  // for (int i = 1; i < 512; i++) {
+  //   pagetable[i] = 0;
+  // }
 
-  /** 0xc000000 - 0x40000000 **/
+  // /** 0xc000000 - 0x40000000 **/
   uint64 pa = PTE2PA(pagetable[0]);
-  for (int i = 96; i < 512; i++)  {
-    *((pagetable_t)pa + i) = 0;
-  }
+  // for (int i = 96; i < 512; i++)  {
+  //   *((pagetable_t)pa + i) = 0;
+  // }
 
   /** 0x0 - 0xc000000 **/
-  for (uint64 va = 0; va < PLIC; va+=PGSIZE) {
-    pte_t *pte = walk(pagetable, va, 0);
-    if (pte != 0) {
-      *pte = 0;
+  for (int i = 0; i < 96; i++) {
+    pte_t pte = *((pagetable_t)pa+i);
+    if (pte & PTE_V) {
+      kfree((void *)PTE2PA(pte));
     }
   }
 
-  freewalk(pagetable);
+  kfree((void *)pa);
+  kfree((void *)pagetable);
+
+  /** 0x0 - 0xc000000 **/
+  // for (uint64 va = 0; va < PLIC; va+=PGSIZE) {
+  //   pte_t *pte = walk(pagetable, va, 0);
+  //   if (pte != 0) {
+  //     *pte = 0;
+  //   }
+  // }
+
+  // freewalk(pagetable);
 }
 
 // a user program that calls exec("/init")
