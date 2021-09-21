@@ -1,0 +1,6 @@
+1. a0,a1,...
+2. 0x24, optimize at compile time
+3. 0x628
+4. 0x34
+5. 0x726c6400, no
+6. depends on a2 register's value
