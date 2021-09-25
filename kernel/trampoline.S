@@ -139,3 +139,9 @@ userret:
         # return to user mode and user pc.
         # usertrapret() set up sstatus and sepc.
         sret
+
+.globl userret2
+userret2:
+        csrw satp, a0
+        sfence.vma zero, zero
+        sret
