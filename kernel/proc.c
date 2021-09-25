@@ -130,6 +130,7 @@ found:
   p->alarmticks = 0;
   p->alarminterval = 0;
   p->alarmhandler = 0;
+  p->alermflag = 0;
 
   return p;
 }

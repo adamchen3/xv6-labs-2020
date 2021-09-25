@@ -29,6 +29,13 @@ trapinithart(void)
   w_stvec((uint64)kernelvec);
 }
 
+void
+backup_trapframe(struct proc *p)
+{
+  for (int i = 0; i < sizeof(struct trapframe)/sizeof(uint64); i++) {
+    *((uint64 *)(&p->alarmtrapframe) + i) = *((uint64 *)p->trapframe + i);
+  }
+}
 //
 // handle an interrupt, exception, or system call from user space.
 // called from trampoline.S
@@ -59,6 +66,7 @@ usertrap(void)
     // sepc points to the ecall instruction,
     // but we want to return to the next instruction.
     p->trapframe->epc += 4;
+    p->alarmret = p->trapframe->epc;
 
     // an interrupt will change sstatus &c registers,
     // so don't enable until done with those registers.
@@ -80,11 +88,14 @@ usertrap(void)
   if(which_dev == 2) {
     if (p->alarminterval != 0) {
       p->alarmticks++;
-      if (p->alarmticks >= p->alarminterval) {
+      if (p->alarmticks >= p->alarminterval && p->alermflag == 0) {
+        p->alermflag = 1;
         p->alarmticks = 0;
         // printf("alarmhandler: %p\n", p->alarmhandler);
         // (*(p->alarmhandler))();
-        usertrapret2addr((uint64)p->alarmhandler); 
+        backup_trapframe(p);
+        p->trapframe->epc = (uint64)p->alarmhandler;
+        usertrapret();
       }
     }
 
@@ -92,39 +103,6 @@ usertrap(void)
   }
 
   usertrapret();
-}
-
-void 
-uservec2(void)
-{
-  printf("Hello World\n");
-  usertrapret();
-}
-
-// return to user space with specified addr
-void
-usertrapret2addr(uint64 addr)
-{
-  
-  struct proc *p = myproc();
-
-  intr_off();
-  // send syscalls, interrupts, and exceptions to trampoline.S
-  w_stvec((uint64)uservec2);
-
-  // set S Previous Privilege mode to User.
-  unsigned long x = r_sstatus();
-  x &= ~SSTATUS_SPP; // clear SPP to 0 for user mode
-  x |= SSTATUS_SPIE; // enable interrupts in user mode
-  w_sstatus(x);
-
-  // set S Exception Program Counter to the saved user pc.
-  w_sepc(addr);
-
-  // tell trampoline.S the user page table to switch to.
-  uint64 satp = MAKE_SATP(p->pagetable);
-  uint64 fn = TRAMPOLINE + (userret2 - trampoline);
-  ((void (*)(uint64))fn)(satp);
 }
 
 //
