@@ -391,7 +391,7 @@ myapi.key:
 
 USER_FILES = user/user.h user/usys.pl user/alarmtest.c
 KERNEL_FILES = kernel/defs.h kernel/printf.c kernel/sysproc.c kernel/riscv.h kernel/syscall.h kernel/syscall.c kernel/sysproc.c kernel/proc.h kernel/proc.c kernel/trap.c kernel/trampoline.S
-TXT_FILES = answers-traps.txt
+TXT_FILES = answers-traps.txt time.txt
 REMOTE_IP = 115.159.69.199
 REMOTE_PATH = /root/xv6-labs-2020/
 sendUser:
