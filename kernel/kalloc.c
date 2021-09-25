@@ -31,10 +31,10 @@ kinit()
 }
 
 void
-freerange(void *pa_start, void *pa_end)     // 将pa_start到pa_end之间的内存按4K一页的大小进行分页
+freerange(void *pa_start, void *pa_end)
 {
   char *p;
-  p = (char*)PGROUNDUP((uint64)pa_start);  // 将开始地址进行页对齐（multiple of 4096）
+  p = (char*)PGROUNDUP((uint64)pa_start);
   for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE)
     kfree(p);
 }
