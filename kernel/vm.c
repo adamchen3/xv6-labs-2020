@@ -56,6 +56,13 @@ kvminithart()
   sfence_vma();
 }
 
+void
+kvmsethart(pagetable_t pagetable)
+{
+  w_satp(MAKE_SATP(pagetable));
+  sfence_vma();
+}
+
 // Return the address of the PTE in page table pagetable
 // that corresponds to virtual address va.  If alloc!=0,
 // create any required page-table pages.
@@ -151,7 +158,7 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
   uint64 a, last;
   pte_t *pte;
 
-  a = PGROUNDDOWN(va);
+  a = PGROUNDDOWN(va);  // 将最后12位置0
   last = PGROUNDDOWN(va + size - 1);
   for(;;){
     if((pte = walk(pagetable, a, 1)) == 0)
@@ -335,6 +342,19 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
   return -1;
 }
 
+void kvmcopy(pagetable_t kpagetable, pagetable_t pagetable, uint64 oldsz, uint64 newsz)
+{
+  if (newsz >= PLIC) {
+    panic("kvmcopy: size too large");
+  }
+  for (uint64 va = oldsz; va <= newsz; va+=PGSIZE) {
+    pte_t *pte = walk(pagetable, va, 0);
+    if (pte != 0) {
+      *walk(kpagetable, va, 1) = (*pte & ~(PTE_W | PTE_X | PTE_U));
+    }
+  }
+}
+
 // mark a PTE invalid for user access.
 // used by exec for the user stack guard page.
 void
@@ -379,6 +399,8 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 int
 copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 {
+  return copyin_new(pagetable, dst, srcva, len);
+  /**
   uint64 n, va0, pa0;
 
   while(len > 0){
@@ -396,6 +418,7 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
     srcva = va0 + PGSIZE;
   }
   return 0;
+  */
 }
 
 // Copy a null-terminated string from user to kernel.
@@ -405,6 +428,8 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 int
 copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 {
+  return copyinstr_new(pagetable, dst, srcva, max);
+  /**
   uint64 n, va0, pa0;
   int got_null = 0;
 
@@ -438,5 +463,31 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
     return 0;
   } else {
     return -1;
+  }
+  */
+}
+
+
+void 
+vmprint(pagetable_t pagetable)
+{
+  printf("page table %p\n", pagetable);
+  for (int i = 0; i < 512; i++) {
+    pte_t pte = *(pagetable + i);
+    if (pte & PTE_V) {
+      printf("..%d: pte %p pa %p\n", i, pte, PTE2PA(pte));
+      for (int j = 0; j < 512; j++) {
+        pte_t pte2 = *((pagetable_t)PTE2PA(pte) + j);
+        if (pte2 & PTE_V) {
+          printf(".. ..%d: pte %p pa %p\n", j, pte2, PTE2PA(pte2));
+          for (int k = 0; k < 512; k++) {
+            pte_t pte3 = *((pagetable_t)PTE2PA(pte2) + k);
+            if (pte3 & PTE_V) {
+              printf(".. .. ..%d: pte %p pa %p\n", k, pte3, PTE2PA(pte3));
+            }
+          }
+        }
+      }
+    }
   }
 }

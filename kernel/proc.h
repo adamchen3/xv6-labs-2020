@@ -108,4 +108,5 @@ struct proc {
   int alarminterval;
   void (*alarmhandler)();
   uint64 alarmvec;
+  pagetable_t kpagetable;      // Kernel page table
 };

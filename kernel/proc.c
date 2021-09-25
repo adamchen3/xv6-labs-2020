@@ -121,6 +121,13 @@ found:
     return 0;
   }
 
+  p->kpagetable = proc_kpagetable(p);
+  if (p->kpagetable == 0) {
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
+ 
   // Set up new context to start executing at forkret,
   // which returns to user space.
   memset(&p->context, 0, sizeof(p->context));
@@ -145,6 +152,9 @@ freeproc(struct proc *p)
   p->trapframe = 0;
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
+  if(p->kpagetable) {
+    proc_freekpagetable(p->kpagetable);
+  }
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
@@ -189,6 +199,42 @@ proc_pagetable(struct proc *p)
   return pagetable;
 }
 
+extern pagetable_t kernel_pagetable;
+
+pagetable_t
+proc_kpagetable()
+{
+  pagetable_t pagetable;
+  pagetable = uvmcreate();
+  if (pagetable == 0) {
+    return 0;
+  }
+
+  pagetable_t pte_pagetable = uvmcreate();
+  if (pte_pagetable == 0) {
+    kfree((void *)pagetable);
+    return 0;
+  }
+
+  pte_t pte = kernel_pagetable[0];
+  uint64 pa = PTE2PA(pte);
+  /**
+   * @brief 
+   * 0-95 used for user page table
+   */
+  for (int i = 96; i < 512; i++)  {
+    pte = *((pagetable_t)pa + i);
+    pte_pagetable[i] = pte;
+  }
+  pagetable[0] = PA2PTE(pte_pagetable) | PTE_V;
+
+  for (int i = 1; i < 512; i++) {
+    pagetable[i] = kernel_pagetable[i];
+  }
+
+  return pagetable;
+}
+
 // Free a process's page table, and free the
 // physical memory it refers to.
 void
@@ -197,6 +243,46 @@ proc_freepagetable(pagetable_t pagetable, uint64 sz)
   uvmunmap(pagetable, TRAMPOLINE, 1, 0);
   uvmunmap(pagetable, TRAPFRAME, 1, 0);
   uvmfree(pagetable, sz);
+}
+
+// todo: 还可以继续优化以提高性能
+// 优化了一下
+// 继续优化的话，就加多个size参数，根据size去释放内存
+// 那么在kvmcopy那里也需要做相应的修改
+void
+proc_freekpagetable(pagetable_t pagetable)
+{
+  /** 0x40000000 - MAXVAL **/
+  // for (int i = 1; i < 512; i++) {
+  //   pagetable[i] = 0;
+  // }
+
+  // /** 0xc000000 - 0x40000000 **/
+  uint64 pa = PTE2PA(pagetable[0]);
+  // for (int i = 96; i < 512; i++)  {
+  //   *((pagetable_t)pa + i) = 0;
+  // }
+
+  /** 0x0 - 0xc000000 **/
+  for (int i = 0; i < 96; i++) {
+    pte_t pte = *((pagetable_t)pa+i);
+    if (pte & PTE_V) {
+      kfree((void *)PTE2PA(pte));
+    }
+  }
+
+  kfree((void *)pa);
+  kfree((void *)pagetable);
+
+  /** 0x0 - 0xc000000 **/
+  // for (uint64 va = 0; va < PLIC; va+=PGSIZE) {
+  //   pte_t *pte = walk(pagetable, va, 0);
+  //   if (pte != 0) {
+  //     *pte = 0;
+  //   }
+  // }
+
+  // freewalk(pagetable);
 }
 
 // a user program that calls exec("/init")
@@ -224,6 +310,8 @@ userinit(void)
   // and data into it.
   uvminit(p->pagetable, initcode, sizeof(initcode));
   p->sz = PGSIZE;
+
+  kvmcopy(p->kpagetable, p->pagetable, 0, p->sz);
 
   // prepare for the very first "return" from kernel to user.
   p->trapframe->epc = 0;      // user program counter
@@ -253,6 +341,7 @@ growproc(int n)
   } else if(n < 0){
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
+  kvmcopy(p->kpagetable, p->pagetable, p->sz, sz);
   p->sz = sz;
   return 0;
 }
@@ -277,7 +366,11 @@ fork(void)
     release(&np->lock);
     return -1;
   }
+
+  kvmcopy(np->kpagetable, np->pagetable, np->sz, p->sz);
+
   np->sz = p->sz;
+
 
   np->parent = p;
 
@@ -477,11 +570,13 @@ scheduler(void)
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
+        kvmsethart(p->kpagetable);
         swtch(&c->context, &p->context);
 
         // Process is done running for now.
         // It should have changed its p->state before coming back.
         c->proc = 0;
+        kvminithart();
 
         found = 1;
       }
