@@ -175,6 +175,7 @@ UPROGS=\
 	$U/_grind\
 	$U/_wc\
 	$U/_zombie\
+	$U/_alarmtest\
 
 
 
@@ -388,13 +389,8 @@ myapi.key:
 
 .PHONY: handin tarball tarball-pref clean grade handin-check
 
-<<<<<<< HEAD
 USER_FILES = user/user.h user/usys.pl user/alarmtest.c
 KERNEL_FILES = kernel/defs.h kernel/printf.c kernel/sysproc.c kernel/riscv.h kernel/syscall.h kernel/syscall.c kernel/sysproc.c kernel/proc.h kernel/proc.c kernel/trap.c kernel/trampoline.S
-=======
-USER_FILES =
-KERNEL_FILES = kernel/defs.h kernel/printf.c kernel/sysproc.c kernel/riscv.h
->>>>>>> parent of 1b57b87 (part3 setup)
 TXT_FILES = answers-traps.txt
 REMOTE_IP = 115.159.69.199
 REMOTE_PATH = /root/xv6-labs-2020/

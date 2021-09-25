@@ -84,8 +84,7 @@ usertrap(void)
         p->alarmticks = 0;
         // printf("alarmhandler: %p\n", p->alarmhandler);
         // (*(p->alarmhandler))();
-        // usertrapret2addr((uint64)p->alarmhandler); 
-        p->trapframe->epc = (uint64)p->alarmhandler;
+        usertrapret2addr((uint64)p->alarmhandler); 
       }
     }
 
