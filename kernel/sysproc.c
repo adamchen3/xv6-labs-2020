@@ -98,6 +98,7 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+<<<<<<< HEAD
 
 uint64
 sys_sigalarm(void)
@@ -120,3 +121,5 @@ sys_sigreturn(void)
 {
   return 0;
 }
+=======
+>>>>>>> parent of 1b57b87 (part3 setup)
