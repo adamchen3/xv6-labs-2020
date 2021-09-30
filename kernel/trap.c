@@ -68,6 +68,14 @@ usertrap(void)
   } else if((which_dev = devintr()) != 0){
     // ok
   } else {
+    // load page fault or store page fault
+    if (r_scause() == 13 || r_scause() == 15) {
+      uint64 va = r_stval();
+      char *mem = kalloc();
+      memset(mem, 0, PGSIZE);
+      mappages(myproc()->pagetable, PGROUNDDOWN(va), PGSIZE, (uint64)mem, PTE_W|PTE_R|PTE_U);
+      usertrapret();
+    }
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
     p->killed = 1;

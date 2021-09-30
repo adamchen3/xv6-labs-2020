@@ -389,7 +389,7 @@ myapi.key:
 .PHONY: handin tarball tarball-pref clean grade handin-check
 
 USER_FILES = user/user.h user/usys.pl user/alarmtest.c
-KERNEL_FILES = kernel/sysproc.c
+KERNEL_FILES = kernel/sysproc.c kernel/trap.c kernel/vm.c
 TXT_FILES = time.txt
 REMOTE_IP = 115.159.69.199
 REMOTE_PATH = /root/xv6-labs-2020/
