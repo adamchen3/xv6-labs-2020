@@ -70,14 +70,22 @@ usertrap(void)
   } else if (r_scause() == 13 || r_scause() == 15) {
     // load page fault or store page fault
     uint64 va = r_stval();
-    uint64 pa = (uint64)kalloc();
-    if (pa == 0) {
+    uint64 stackbase = PGROUNDUP(p->trapframe->sp);
+    // printf("va:%p, sz:%p, stackbottom:%p, stacktop:%p\n", va, p->sz, stackbase - 2*PGSIZE, stackbase - PGSIZE);
+    if (va >= stackbase - 2*PGSIZE && va <= stackbase - PGSIZE) {
       p->killed = 1;
-    } else {
-      memset((void *)pa, 0, PGSIZE);
-      if (mappages(p->pagetable, PGROUNDDOWN(va), PGSIZE, pa, PTE_W|PTE_R|PTE_U) != 0) {
-        kfree((void *)pa);
+    } else if (va > p->sz) {
+      p->killed = 1;
+    }else {
+      uint64 pa = (uint64)kalloc();
+      if (pa == 0) {
         p->killed = 1;
+      } else {
+        memset((void *)pa, 0, PGSIZE);
+        if (mappages(p->pagetable, PGROUNDDOWN(va), PGSIZE, pa, PTE_W|PTE_R|PTE_U) != 0) {
+          kfree((void *)pa);
+          p->killed = 1;
+        }
       }
     }
   } else {
