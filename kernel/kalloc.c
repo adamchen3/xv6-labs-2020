@@ -30,13 +30,19 @@ kinit()
   freerange(end, (void*)PHYSTOP);
 }
 
+uint8 page_refs[MAX_PAGES];  // 每个物理page的引用数，最多也就NPROC=64个进程，即引用数，uint8够用了。
+
+
 void
 freerange(void *pa_start, void *pa_end)
 {
   char *p;
+  uint64 index = 0;
   p = (char*)PGROUNDUP((uint64)pa_start);
-  for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE)
+  for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE) {
+    page_refs[index++] = 0;
     kfree(p);
+  }
 }
 
 // Free the page of physical memory pointed at by v,
@@ -50,6 +56,18 @@ kfree(void *pa)
 
   if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
     panic("kfree");
+    
+  
+  
+  // decrement page refs
+  uint64 index = PAGE_INDEX(pa);
+  if (page_refs[index] > 0) {
+    page_refs[index]--;
+  }
+
+  if (page_refs[index] > 0) {
+    return;
+  }
 
   // Fill with junk to catch dangling refs.
   memset(pa, 1, PGSIZE);
@@ -60,6 +78,7 @@ kfree(void *pa)
   r->next = kmem.freelist;
   kmem.freelist = r;
   release(&kmem.lock);
+  
 }
 
 // Allocate one 4096-byte page of physical memory.
@@ -76,7 +95,12 @@ kalloc(void)
     kmem.freelist = r->next;
   release(&kmem.lock);
 
-  if(r)
+  if(r) {
     memset((char*)r, 5, PGSIZE); // fill with junk
+
+    // increment page refs
+    page_refs[PAGE_INDEX(r)]++;
+  }
+
   return (void*)r;
 }
