@@ -1,0 +1,1 @@
+insert(key, value, &table[i], table[i]);

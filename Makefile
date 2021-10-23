@@ -392,7 +392,8 @@ myapi.key:
 
 USER_FILES = user/uthread.c user/uthread_switch.S
 KERNEL_FILES = kernel/trap.c kernel/kalloc.c kernel/memlayout.h kernel/vm.c kernel/riscv.h kernel/defs.h
-TXT_FILES = time.txt
+OTHER_FILES = notxv6/ph.c
+TXT_FILES = answers-thread.txt time.txt
 REMOTE_IP = 115.159.69.199
 REMOTE_PATH = /root/xv6-labs-2020/
 sendUser:
@@ -406,3 +407,6 @@ sendMakefile:
 
 sendTxt:
 	scp $(TXT_FILES) root@$(REMOTE_IP):$(REMOTE_PATH)
+
+sendOthers:
+	scp $(OTHER_FILES) root@$(REMOTE_IP):$(REMOTE_PATH)/notxv6
