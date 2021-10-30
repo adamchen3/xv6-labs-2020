@@ -12,6 +12,7 @@
 
 void freerange(void *pa_start, void *pa_end);
 void kfree2(void *, int);
+void *stealmemory(int);
 
 extern char end[]; // first address after kernel.
                    // defined by kernel.ld.
@@ -26,7 +27,7 @@ struct {
 } kmem;
 
 int 
-mycpyid()
+mycpuid()
 {
   int id;
   push_off();
@@ -38,7 +39,7 @@ mycpyid()
 void
 kinit()
 {
-  initlock(&kmem.lock, "kmem");
+  // initlock(&kmem.lock, "kmem");
   for (int i = 0; i < NCPU; i++) {
     initlock(&cpus[i].lock, "kmem");
   }
@@ -88,7 +89,8 @@ void kfree2(void *pa, int cpuid)
 void
 kfree(void *pa)
 {
-  kfree2(pa, mycpyid());
+  int cpuid = mycpuid();
+  kfree2(pa, cpuid);
   // struct run *r;
 
   // if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
@@ -112,16 +114,18 @@ void *
 kalloc(void)
 {
   struct run *r;
+  int cpuid = mycpuid();
 
-  struct cpu *cpu = &cpus[mycpyid()];
+  struct cpu *cpu = &cpus[cpuid];
   acquire(&cpu->lock);
   r = cpu->freelist;
-  if(r) {
+  if(r)
     cpu->freelist = r->next;
-  } else {
-    // todo: stealing memory from other cpu
-  }
   release(&cpu->lock);
+
+  if (!r)
+    // stealing memory from other cpu
+    r = stealmemory(cpuid);
 
   // acquire(&kmem.lock);
   // r = kmem.freelist;
@@ -132,4 +136,34 @@ kalloc(void)
   if(r)
     memset((char*)r, 5, PGSIZE); // fill with junk
   return (void*)r;
+}
+
+void *
+stealmemory(int cpuid)
+{
+  int id = cpuid + 1;
+  struct run *r = 0;
+  for (int i = 0; i < NCPU; i++) {
+    if (id >= NCPU) {
+      id = 0;
+    }
+
+    if (cpuid == id) {
+      break;
+    }
+
+    struct cpu *cpu = &cpus[id];
+
+    acquire(&cpu->lock);
+    r = cpu->freelist;
+    if (r) {
+      cpu->freelist = r->next;
+      release(&cpu->lock);
+      break;
+    }
+    release(&cpu->lock);
+
+    id++;
+  }
+  return (void *)r;
 }
