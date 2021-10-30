@@ -8,6 +8,7 @@
 #include "spinlock.h"
 #include "riscv.h"
 #include "defs.h"
+#include "proc.h"
 
 void freerange(void *pa_start, void *pa_end);
 
@@ -23,10 +24,23 @@ struct {
   struct run *freelist;
 } kmem;
 
+int 
+mycpyid()
+{
+  int id;
+  push_off();
+  id = cpuid();
+  pop_off();
+  return id;
+}
+
 void
 kinit()
 {
   initlock(&kmem.lock, "kmem");
+  for (int i = 0; i < NCPU; i++) {
+    initlock(&cpus[i].lock, "kmem");
+  }
   freerange(end, (void*)PHYSTOP);
 }
 

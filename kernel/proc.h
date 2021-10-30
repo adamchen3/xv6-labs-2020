@@ -18,8 +18,12 @@ struct context {
   uint64 s11;
 };
 
+struct run;  // declaration, don't use extern
+
 // Per-CPU state.
 struct cpu {
+  struct spinlock lock;
+  struct run *freelist;
   struct proc *proc;          // The process running on this cpu, or null.
   struct context context;     // swtch() here to enter scheduler().
   int noff;                   // Depth of push_off() nesting.
