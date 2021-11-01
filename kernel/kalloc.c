@@ -141,7 +141,7 @@ kalloc(void)
 void *
 stealmemory(int cpuid)
 {
-  int id = cpuid + NCPU/2; //从远一点开始steal
+  int id = cpuid + 1;
   struct run *r = 0;
   for (int i = 0; i < NCPU; i++) {
     if (id >= NCPU) {
@@ -149,7 +149,7 @@ stealmemory(int cpuid)
     }
 
     if (cpuid == id) {
-      continue;
+      break;
     }
 
     struct cpu *cpu = &cpus[id];
