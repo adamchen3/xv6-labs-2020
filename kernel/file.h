@@ -21,7 +21,7 @@ struct inode {
   struct sleeplock lock; // protects everything below here
   int valid;          // inode has been read from disk?
 
-  short type;         // copy of disk inode
+  short type;         // copy of disk inode, 那为啥不直接 struct dinode dinode?
   short major;
   short minor;
   short nlink;
