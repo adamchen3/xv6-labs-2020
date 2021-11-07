@@ -389,7 +389,7 @@ myapi.key:
 
 .PHONY: handin tarball tarball-pref clean grade handin-check
 USER_FILES = user/uthread.c user/uthread_switch.S
-KERNEL_FILES = kernel/fs.h kernel/fs.c
+KERNEL_FILES = kernel/fs.h kernel/fs.c kernel/file.h
 OTHER_FILES = notxv6/ph.c notxv6/barrier.c
 TXT_FILES = time.txt
 REMOTE_IP = 115.159.69.199
