@@ -388,3 +388,23 @@ myapi.key:
 
 
 .PHONY: handin tarball tarball-pref clean grade handin-check
+USER_FILES = user/uthread.c user/uthread_switch.S
+KERNEL_FILES = kernel/fs.h kernel/fs.c
+OTHER_FILES = notxv6/ph.c notxv6/barrier.c
+TXT_FILES = time.txt
+REMOTE_IP = 115.159.69.199
+REMOTE_PATH = /root/xv6-labs-2020/
+sendUser:
+	scp $(USER_FILES) root@$(REMOTE_IP):$(REMOTE_PATH)/user
+
+sendKernel:
+	scp $(KERNEL_FILES) root@$(REMOTE_IP):$(REMOTE_PATH)/kernel
+
+sendMakefile:
+	scp Makefile root@$(REMOTE_IP):$(REMOTE_PATH)
+
+sendTxt:
+	scp $(TXT_FILES) root@$(REMOTE_IP):$(REMOTE_PATH)
+
+sendOthers:
+	scp $(OTHER_FILES) root@$(REMOTE_IP):$(REMOTE_PATH)/notxv6
