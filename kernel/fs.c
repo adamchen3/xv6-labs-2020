@@ -629,6 +629,92 @@ dirlink(struct inode *dp, char *name, uint inum)
   return 0;
 }
 
+// Symbolic link
+int
+symlink2(struct inode *ip, char *name, char *target, uint inum)
+{
+  struct symlinkent le;
+  int off;
+
+  if (ip->type != T_SYMLINK) {
+    panic("not a symlink inode");
+  }
+
+  // check if symlink already exist, if exist, override the target and inum;
+  for(off = 0; off < ip->size; off += sizeof(le)) {
+    if(readi(ip, 0, (uint64)&le, off, sizeof(le)) != sizeof(le)) {
+      panic("symlink read");
+    }
+    if(namecmp(name, le.name) == 0)  {
+      strncpy(le.target, target, DIRSIZ);
+      le.inum = inum;
+      if(writei(ip, 0, (uint64)&le, off, sizeof(le)) != sizeof(le)) {
+        panic("symlink write");
+      }
+      return 0;
+    }
+  }
+
+
+  for(off = 0; off < ip->size; off += sizeof(le)) {
+    if(readi(ip, 0, (uint64)&le, off, sizeof(le)) != sizeof(le)) {
+      panic("symlink read");
+    }
+
+    if(le.inum == 0)  {
+      break;
+    }
+  }
+
+  strncpy(le.name, name, DIRSIZ);
+  strncpy(le.target, target, DIRSIZ);
+  le.inum = inum;
+  if(writei(ip, 0, (uint64)&le, off, sizeof(le)) != sizeof(le)) {
+    panic("symlink write");
+  }
+  return 0;
+}
+
+struct inode *
+symlinklookup(struct inode *lp, char *name, uint depth)
+{
+  struct symlinkent le;
+  struct inode *dp;
+  struct inode *ip;
+  // struct inode *tp;
+  int off;
+
+  if (depth >= 10) {
+    return 0;
+  }
+ 
+  for(off = 0; off < lp->size; off += sizeof(le)) {
+
+    if(readi(lp, 0, (uint64)&le, off, sizeof(le)) != sizeof(le)) {
+      panic("symlink read");
+    }
+
+    if(namecmp(name, le.name) == 0)  {
+      dp = iget(lp->dev, le.inum);
+      ilock(dp);
+      if ((ip = dirlookup(dp, le.target, 0)) != 0) {
+        iunlock(dp);
+        if (ip->type == T_SYMLINK) {
+          // ilock(ip); // 这里上锁的话，循环link会导致死锁
+          ip = symlinklookup(ip, le.target, depth + 1);
+          // iunlock(ip);
+          return ip;
+        }
+        else {
+          return ip;
+        }
+      }
+      iunlock(dp);
+    }
+  }
+  return 0;
+}
+
 // Paths
 
 // Copy the next path element from path into name.

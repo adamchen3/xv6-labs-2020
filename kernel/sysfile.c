@@ -252,7 +252,7 @@ create(char *path, short type, short major, short minor)
   if((ip = dirlookup(dp, name, 0)) != 0){
     iunlockput(dp);
     ilock(ip);
-    if(type == T_FILE && (ip->type == T_FILE || ip->type == T_DEVICE))
+    if((type == T_FILE && (ip->type == T_FILE || ip->type == T_DEVICE)) || (type == T_SYMLINK && ip->type == T_SYMLINK))
       return ip;
     iunlockput(ip);
     return 0;
@@ -287,10 +287,12 @@ uint64
 sys_open(void)
 {
   char path[MAXPATH];
+  char name[DIRSIZ];
   int fd, omode;
   struct file *f;
   struct inode *ip;
   int n;
+  struct inode *lp;
 
   if((n = argstr(0, path, MAXPATH)) < 0 || argint(1, &omode) < 0)
     return -1;
@@ -322,6 +324,24 @@ sys_open(void)
     return -1;
   }
 
+  // if inode is symlink and is not NOFOLLOW mode
+  if (ip->type == T_SYMLINK && !(omode & O_NOFOLLOW)) {
+    if (nameiparent(path, name) == 0) {
+      iunlockput(ip);
+      end_op();
+      return -1;
+    }
+
+    if ((lp = symlinklookup(ip, name, 0)) == 0) {
+      iunlockput(ip);
+      end_op();
+      return -1;
+    }
+    ilock(lp);
+    iunlock(ip);
+    ip = lp;
+  }
+
   if((f = filealloc()) == 0 || (fd = fdalloc(f)) < 0){
     if(f)
       fileclose(f);
@@ -344,6 +364,8 @@ sys_open(void)
   if((omode & O_TRUNC) && ip->type == T_FILE){
     itrunc(ip);
   }
+
+  
 
   iunlock(ip);
   end_op();
@@ -488,5 +510,40 @@ sys_pipe(void)
 uint64 
 sys_symlink(void)
 {
+  char name[DIRSIZ], new[MAXPATH], old[MAXPATH], target[DIRSIZ];
+  struct inode *dp, *ip;
+
+  if(argstr(0, old, MAXPATH) < 0 || argstr(1, new, MAXPATH) < 0)
+    return -1;
+
+  begin_op();
+  if((dp = nameiparent(old, target)) == 0){
+    end_op();
+    return -1;
+  }
+  // had found the dir inum and the name
+  
+  
+  if (nameiparent(new, name) == 0)  {
+    end_op();
+    return -1;
+  }  
+
+  if((ip = create(new, T_SYMLINK, 0, 0)) == 0)
+    goto bad;
+
+  // ilock(ip); // no need to lock, create will lock
+  if(symlink2(ip, name, target, dp->inum) < 0) {
+    iunlockput(ip);
+    goto bad;
+  }
+
+  iunlockput(ip);
+  end_op();
+
   return 0;
+
+bad:
+  end_op();
+  return -1;
 }

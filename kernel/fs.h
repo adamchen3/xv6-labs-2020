@@ -59,3 +59,9 @@ struct dirent {
   char name[DIRSIZ];
 };
 
+
+struct symlinkent {
+  char name[DIRSIZ];
+  char target[DIRSIZ];
+  uint inum;
+};
