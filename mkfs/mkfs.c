@@ -68,7 +68,7 @@ int
 main(int argc, char *argv[])
 {
   int i, cc, fd;
-  uint rootino, inum, off;
+  uint rootino, inum, off, symlinkino;
   struct dirent de;
   char buf[BSIZE];
   struct dinode din;
@@ -117,6 +117,10 @@ main(int argc, char *argv[])
 
   rootino = ialloc(T_DIR);
   assert(rootino == ROOTINO);
+
+  symlinkino = ialloc(T_SYMLINK);
+  assert(symlinkino == SYMLINKINO);
+
 
   bzero(&de, sizeof(de));
   de.inum = xshort(rootino);

@@ -244,13 +244,6 @@ create(char *path, short type, short major, short minor)
   struct inode *ip, *dp;
   char name[DIRSIZ];
 
-  if ((ip = namei(path)) != 0) {
-    ilock(ip);
-    if (type == T_SYMLINK && ip->type == T_SYMLINK) {
-      return ip;
-    }
-    iunlockput(ip);
-  }
 
   if((dp = nameiparent(path, name)) == 0)
     return 0;
@@ -266,8 +259,14 @@ create(char *path, short type, short major, short minor)
     return 0;
   }
 
-  if((ip = ialloc(dp->dev, type)) == 0)
-    panic("create: ialloc");
+  if (type == T_SYMLINK) {
+    if ((ip = getsymlinkinode()) == 0) {
+      return 0;
+    }
+  }else{
+    if((ip = ialloc(dp->dev, type)) == 0)
+      panic("create: ialloc");
+  }
 
   ilock(ip);
   ip->major = major;
@@ -346,7 +345,8 @@ sys_open(void)
       return -1;
     }
     ilock(lp);
-    iunlock(ip);
+    // iunlock(ip);
+    iunlockput(ip);
     ip = lp;
   }
 
@@ -520,6 +520,7 @@ sys_symlink(void)
 {
   char name[DIRSIZ], new[MAXPATH], old[MAXPATH], target[DIRSIZ];
   struct inode *dp, *ip;
+  uint inum;
 
   if(argstr(0, old, MAXPATH) < 0 || argstr(1, new, MAXPATH) < 0)
     return -1;
@@ -530,25 +531,31 @@ sys_symlink(void)
     return -1;
   }
   // had found the dir inum and the name
+  ilock(dp);
+  inum = dp->inum;
+  iunlockput(dp);
   
   
-  if (nameiparent(new, name) == 0)  {
+  if ((dp = nameiparent(new, name)) == 0)  {
     end_op();
     return -1;
-  }  
+  }
 
-  if((ip = create(new, T_SYMLINK, 0, 0)) == 0)
+  iput(dp); 
+
+  if((ip = create(new, T_SYMLINK, 0, 0)) == 0) {
     goto bad;
+  }
 
   // ilock(ip); // no need to lock, create will lock
-  if(symlink2(ip, name, target, dp->inum) < 0) {
+  if(symlink2(ip, name, target, inum) < 0) {
     // iunlock(ip);
     iunlockput(ip);
     goto bad;
   }
 
-  // iunlockput(ip);
-  iunlock(ip);
+  iunlockput(ip);
+  // iunlock(ip);
   end_op();
 
   return 0;

@@ -702,9 +702,9 @@ symlinklookup(struct inode *lp, char *name, uint depth)
         iunlockput(dp);
         if (ip->type == T_SYMLINK) {
           // ilock(ip); // 这里上锁的话，循环link会导致死锁
-          ip = symlinklookup(ip, le.target, depth + 1);
+          return symlinklookup(ip, le.target, depth + 1);
           // iunlock(ip);
-          return ip;
+          // return ip;
         }
         else {
           return ip;
@@ -715,6 +715,12 @@ symlinklookup(struct inode *lp, char *name, uint depth)
     }
   }
   return 0;
+}
+
+struct inode*
+getsymlinkinode()
+{
+  return iget(ROOTDEV, SYMLINKINO);
 }
 
 // Paths

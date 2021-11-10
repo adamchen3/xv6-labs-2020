@@ -5,6 +5,8 @@
 #define ROOTINO  1   // root i-number
 #define BSIZE 1024  // block size
 
+#define SYMLINKINO 2 // inode used for symlink
+
 // Disk layout:
 // [ boot block | super block | log | inode blocks |
 //                                          free bit map | data blocks]

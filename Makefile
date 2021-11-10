@@ -391,7 +391,7 @@ myapi.key:
 .PHONY: handin tarball tarball-pref clean grade handin-check
 USER_FILES = user/user.h user/usys.pl user/symlinktest.c
 KERNEL_FILES = kernel/fs.h kernel/fs.c kernel/file.h kernel/syscall.h kernel/syscall.c kernel/sysfile.c kernel/stat.h kernel/fcntl.h kernel/defs.h
-OTHER_FILES = notxv6/ph.c notxv6/barrier.c
+OTHER_FILES = mkfs/mkfs.c
 TXT_FILES = time.txt
 REMOTE_IP = 115.159.69.199
 REMOTE_PATH = /root/xv6-labs-2020/
@@ -408,4 +408,4 @@ sendTxt:
 	scp $(TXT_FILES) root@$(REMOTE_IP):$(REMOTE_PATH)
 
 sendOthers:
-	scp $(OTHER_FILES) root@$(REMOTE_IP):$(REMOTE_PATH)/notxv6
+	scp $(OTHER_FILES) root@$(REMOTE_IP):$(REMOTE_PATH)/mkfs
