@@ -607,6 +607,10 @@ dirlink(struct inode *dp, char *name, uint inum)
   struct dirent de;
   struct inode *ip;
 
+  if (strncmp(name, "", 1) == 0) {
+    return -1;
+  }
+
   // Check that name is not present.
   if((ip = dirlookup(dp, name, 0)) != 0){
     iput(ip);
@@ -672,6 +676,7 @@ symlink2(struct inode *ip, char *name, char *target, uint inum)
   if(writei(ip, 0, (uint64)&le, off, sizeof(le)) != sizeof(le)) {
     panic("symlink write");
   }
+  ip->nlink++;
   return 0;
 }
 
@@ -681,7 +686,7 @@ symlinklookup(struct inode *lp, char *name, uint depth)
   struct symlinkent le;
   struct inode *dp;
   struct inode *ip;
-  // struct inode *tp;
+  struct inode *tp;
   int off;
 
   if (depth >= 10) {
@@ -702,9 +707,10 @@ symlinklookup(struct inode *lp, char *name, uint depth)
         iunlockput(dp);
         if (ip->type == T_SYMLINK) {
           // ilock(ip); // 这里上锁的话，循环link会导致死锁
-          return symlinklookup(ip, le.target, depth + 1);
+          tp = symlinklookup(ip, le.target, depth + 1);
           // iunlock(ip);
-          // return ip;
+          iput(ip);
+          return tp;
         }
         else {
           return ip;

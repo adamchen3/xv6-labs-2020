@@ -244,6 +244,9 @@ create(char *path, short type, short major, short minor)
   struct inode *ip, *dp;
   char name[DIRSIZ];
 
+  if (strncmp(path, "", 1) == 0) {
+    return 0;
+  }
 
   if((dp = nameiparent(path, name)) == 0)
     return 0;
@@ -261,6 +264,7 @@ create(char *path, short type, short major, short minor)
 
   if (type == T_SYMLINK) {
     if ((ip = getsymlinkinode()) == 0) {
+      iunlockput(dp);
       return 0;
     }
   }else{
@@ -333,11 +337,12 @@ sys_open(void)
 
   // if inode is symlink and is not NOFOLLOW mode
   if (ip->type == T_SYMLINK && !(omode & O_NOFOLLOW)) {
-    if (nameiparent(path, name) == 0) {
+    if ((lp = nameiparent(path, name)) == 0) {
       iunlockput(ip);
       end_op();
       return -1;
     }
+    iput(lp);
 
     if ((lp = symlinklookup(ip, name, 0)) == 0) {
       iunlockput(ip);
