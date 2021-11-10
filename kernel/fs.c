@@ -676,7 +676,8 @@ symlink2(struct inode *ip, char *name, char *target, uint inum)
   if(writei(ip, 0, (uint64)&le, off, sizeof(le)) != sizeof(le)) {
     panic("symlink write");
   }
-  ip->nlink++;
+  // ip->nlink++;
+  iupdate(ip);
   return 0;
 }
 

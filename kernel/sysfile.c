@@ -215,6 +215,13 @@ sys_unlink(void)
     goto bad;
   }
 
+  if (ip->type == T_SYMLINK) {
+    iunlockput(dp);
+    iunlockput(ip);
+    end_op();
+    return 0;
+  }
+
   memset(&de, 0, sizeof(de));
   if(writei(dp, 0, (uint64)&de, off, sizeof(de)) != sizeof(de))
     panic("unlink: writei");
@@ -267,10 +274,15 @@ create(char *path, short type, short major, short minor)
       iunlockput(dp);
       return 0;
     }
-  }else{
-    if((ip = ialloc(dp->dev, type)) == 0)
-      panic("create: ialloc");
+    ilock(ip);
+    if(dirlink(dp, name, ip->inum) < 0)
+      panic("create: dirlink");
+    iunlockput(dp);
+    return ip;
   }
+
+  if((ip = ialloc(dp->dev, type)) == 0)
+    panic("create: ialloc");
 
   ilock(ip);
   ip->major = major;
