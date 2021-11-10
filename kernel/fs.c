@@ -698,7 +698,8 @@ symlinklookup(struct inode *lp, char *name, uint depth)
       dp = iget(lp->dev, le.inum);
       ilock(dp);
       if ((ip = dirlookup(dp, le.target, 0)) != 0) {
-        iunlock(dp);
+        // iunlock(dp);
+        iunlockput(dp);
         if (ip->type == T_SYMLINK) {
           // ilock(ip); // 这里上锁的话，循环link会导致死锁
           ip = symlinklookup(ip, le.target, depth + 1);
@@ -709,7 +710,8 @@ symlinklookup(struct inode *lp, char *name, uint depth)
           return ip;
         }
       }
-      iunlock(dp);
+      // iunlock(dp);
+      iunlockput(dp);
     }
   }
   return 0;

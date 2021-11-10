@@ -244,6 +244,14 @@ create(char *path, short type, short major, short minor)
   struct inode *ip, *dp;
   char name[DIRSIZ];
 
+  if ((ip = namei(path)) != 0) {
+    ilock(ip);
+    if (type == T_SYMLINK && ip->type == T_SYMLINK) {
+      return ip;
+    }
+    iunlockput(ip);
+  }
+
   if((dp = nameiparent(path, name)) == 0)
     return 0;
 
@@ -534,11 +542,13 @@ sys_symlink(void)
 
   // ilock(ip); // no need to lock, create will lock
   if(symlink2(ip, name, target, dp->inum) < 0) {
+    // iunlock(ip);
     iunlockput(ip);
     goto bad;
   }
 
-  iunlockput(ip);
+  // iunlockput(ip);
+  iunlock(ip);
   end_op();
 
   return 0;

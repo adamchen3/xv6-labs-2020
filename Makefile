@@ -389,7 +389,7 @@ myapi.key:
 
 
 .PHONY: handin tarball tarball-pref clean grade handin-check
-USER_FILES = user/user.h user/usys.pl
+USER_FILES = user/user.h user/usys.pl user/symlinktest.c
 KERNEL_FILES = kernel/fs.h kernel/fs.c kernel/file.h kernel/syscall.h kernel/syscall.c kernel/sysfile.c kernel/stat.h kernel/fcntl.h kernel/defs.h
 OTHER_FILES = notxv6/ph.c notxv6/barrier.c
 TXT_FILES = time.txt
