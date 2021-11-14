@@ -175,6 +175,7 @@ UPROGS=\
 	$U/_grind\
 	$U/_wc\
 	$U/_zombie\
+	$U/_mmaptest\
 
 
 
@@ -388,3 +389,23 @@ myapi.key:
 
 
 .PHONY: handin tarball tarball-pref clean grade handin-check
+USER_FILES = user/user.h user/usys.pl
+KERNEL_FILES = kernel/syscall.h kernel/syscall.c kernel/sysproc.c
+OTHER_FILES = mkfs/mkfs.c
+TXT_FILES = time.txt
+REMOTE_IP = 115.159.69.199
+REMOTE_PATH = /root/xv6-labs-2020/
+sendUser:
+	scp $(USER_FILES) root@$(REMOTE_IP):$(REMOTE_PATH)/user
+
+sendKernel:
+	scp $(KERNEL_FILES) root@$(REMOTE_IP):$(REMOTE_PATH)/kernel
+
+sendMakefile:
+	scp Makefile root@$(REMOTE_IP):$(REMOTE_PATH)
+
+sendTxt:
+	scp $(TXT_FILES) root@$(REMOTE_IP):$(REMOTE_PATH)
+
+sendOthers:
+	scp $(OTHER_FILES) root@$(REMOTE_IP):$(REMOTE_PATH)/mkfs
